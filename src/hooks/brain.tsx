@@ -6,11 +6,11 @@ export const useBrain = (
   input: string = ""
 ): [Brain, () => void] => {
   const [brain, setBrain] = useState(
-    new Brain(source, new TextEncoder().encode(input))
+    Brain.create(source, new TextEncoder().encode(input))
   );
 
   const reset = () => {
-    setBrain(new Brain(source, new TextEncoder().encode(input)));
+    setBrain(Brain.create(source, new TextEncoder().encode(input)));
   };
 
   useEffect(() => {}, [brain]);
