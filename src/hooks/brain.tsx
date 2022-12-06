@@ -1,19 +1,21 @@
 import { useState, useEffect } from "react";
 import { Brain } from "../types/brain";
 
-export const useBrain = (
-  source: string,
-  input: string = ""
-): [Brain, () => void] => {
+export const useBrain = (): [
+  Brain,
+  (source: string, input: string) => void
+] => {
   const [brain, setBrain] = useState(
-    Brain.create(source, new TextEncoder().encode(input))
+    Brain.create("", new TextEncoder().encode(""))
   );
 
-  const reset = () => {
+  const runBrain = (source: string, input: string) => {
     setBrain(Brain.create(source, new TextEncoder().encode(input)));
   };
 
-  useEffect(() => {}, [brain]);
+  useEffect(() => {
+    setBrain((brain) => brain.next());
+  }, [brain]);
 
-  return [brain, reset];
+  return [brain, runBrain];
 };
