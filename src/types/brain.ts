@@ -43,9 +43,13 @@ export class Brain {
         return this.read();
       case ".":
         return this.write();
+      case "[":
+        return this.loop();
+      case "]":
+        return this.break();
     }
 
-    return this;
+    return this.comment();
   }
 
   private add(): Brain {
@@ -114,12 +118,62 @@ export class Brain {
     return new Brain(
       this.input,
       this.inputCursor,
-      Uint8Array.of(...this.output, this.memory[this.memoryCursor]),
+      Uint8Array.of(...this.output, this.pointer()),
       this.memory,
       this.memoryCursor,
       this.source,
       this.sourceCursor + 1
     );
+  }
+
+  private loop(): Brain {
+    const sourceCursor =
+      this.pointer() == 0
+        ? matchedBreakPosition(this.source, this.sourceCursor)
+        : this.sourceCursor + 1;
+
+    return new Brain(
+      this.input,
+      this.inputCursor,
+      this.output,
+      this.memory,
+      this.memoryCursor,
+      this.source,
+      sourceCursor
+    );
+  }
+
+  private break(): Brain {
+    const sourceCursor =
+      this.pointer() != 0
+        ? matchedLoopPosition(this.source, this.sourceCursor)
+        : this.sourceCursor + 1;
+
+    return new Brain(
+      this.input,
+      this.inputCursor,
+      this.output,
+      this.memory,
+      this.memoryCursor,
+      this.source,
+      sourceCursor
+    );
+  }
+
+  private comment(): Brain {
+    return new Brain(
+      this.input,
+      this.inputCursor,
+      this.output,
+      this.memory,
+      this.memoryCursor,
+      this.source,
+      this.sourceCursor + 1
+    );
+  }
+
+  private pointer(): number {
+    return this.memory[this.memoryCursor];
   }
 }
 
@@ -129,4 +183,56 @@ const updateUint8Array = (
   f: (_: number) => number
 ): Uint8Array => {
   return new Uint8Array(updateArr(Array.from(arr), at, f(arr[at]) % 256));
+};
+
+const matchedBreakPosition = (src: string, cursor: number): number => {
+  // NOTE: skip first [ itself
+  return _matchedBreakPosition(src, cursor + 1, 1);
+};
+
+const _matchedBreakPosition = (
+  src: string,
+  cursor: number,
+  nest: number
+): number => {
+  if (cursor >= src.length || nest == 0) {
+    return cursor;
+  }
+
+  switch (src[cursor]) {
+    case "[":
+      return _matchedBreakPosition(src, cursor + 1, nest + 1);
+    case "]":
+      return _matchedBreakPosition(src, cursor + 1, nest - 1);
+    default:
+      return _matchedBreakPosition(src, cursor + 1, nest);
+  }
+};
+
+const matchedLoopPosition = (src: string, cursor: number): number => {
+  // NOTE: skip first ] itself
+  return _matchedLoopPosition(src, cursor - 1, 1);
+};
+
+const _matchedLoopPosition = (
+  src: string,
+  cursor: number,
+  nest: number
+): number => {
+  if (cursor < 0) {
+    return 0;
+  }
+  if (nest == 0) {
+    // NOTE: if the pair, which is located in cursor+1, is found, sourceCursor should be just after it
+    return cursor + 2;
+  }
+
+  switch (src[cursor]) {
+    case "[":
+      return _matchedLoopPosition(src, cursor - 1, nest - 1);
+    case "]":
+      return _matchedLoopPosition(src, cursor - 1, nest + 1);
+    default:
+      return _matchedLoopPosition(src, cursor - 1, nest);
+  }
 };
